@@ -25,7 +25,7 @@ from helius import get_asset_batch, get_mint_helius_data_rpc_fallback
 from jupiter import get_jupiter_token_by_mint
 from formatting import format_search_results
 from poller import ensure_poller_started
-from stats import track_user, track_group_join, track_group_left, track_group_activity, log_search, get_stats, format_subscriber_count
+from stats import track_user, track_group_join, track_group_left, track_group_activity, log_search, get_stats, format_subscriber_count, get_active_group_ids
 from monitor import toggle_monitor, is_monitoring, start_monitor
 
 load_dotenv()
@@ -258,6 +258,41 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
+async def cmd_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a message to all groups the bot is in (admin only)."""
+    admin_id = os.environ.get("ADMIN_USER_ID", "").strip()
+    user = update.effective_user
+    if not admin_id or not user or str(user.id) != admin_id:
+        return
+
+    message = " ".join(context.args) if context.args else ""
+    if not message:
+        await update.message.reply_text("Usage: /broadcast <message>")
+        return
+
+    group_ids = get_active_group_ids()
+    if not group_ids:
+        await update.message.reply_text("No active groups.")
+        return
+
+    sent = 0
+    failed = 0
+    for gid in group_ids:
+        try:
+            await context.bot.send_message(
+                chat_id=gid,
+                text=message,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            sent += 1
+        except Exception as e:
+            logger.warning("Broadcast failed for %s: %s", gid, e)
+            failed += 1
+
+    await update.message.reply_text(f"Sent to {sent} groups. Failed: {failed}.")
+
+
 async def cmd_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Toggle the DexScreener trending monitor for this chat."""
     _track_interaction(update)
@@ -412,6 +447,7 @@ def main() -> None:
     app.add_handler(CommandHandler("findog", cmd_findog))
     app.add_handler(CommandHandler("link", cmd_link))
     app.add_handler(CommandHandler("monitor", cmd_monitor))
+    app.add_handler(CommandHandler("broadcast", cmd_broadcast))
     app.add_handler(CommandHandler("stats", cmd_stats))
     # Auto-detect only in private chats (groups require /commands)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_message))

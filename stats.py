@@ -159,3 +159,10 @@ def format_subscriber_count(n: int) -> str:
     if n >= 1_000:
         return f"{n / 1_000:.1f}K"
     return str(n)
+
+
+def get_active_group_ids() -> list[int]:
+    """Return chat IDs of all groups the bot is currently in."""
+    db = _get_db()
+    rows = db.execute("SELECT chat_id FROM groups WHERE left_at IS NULL").fetchall()
+    return [r[0] for r in rows]
