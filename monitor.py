@@ -96,13 +96,40 @@ async def _fetch_top_trending() -> list[TrendingToken]:
     return tokens[:TOP_N]
 
 
+async def _fetch_token_market_data(mint: str) -> dict:
+    """Fetch market cap and symbol for a token from DexScreener."""
+    try:
+        url = f"https://api.dexscreener.com/tokens/v1/solana/{mint}"
+        async with httpx.AsyncClient(timeout=DEX_TIMEOUT) as client:
+            resp = await client.get(url)
+            data = resp.json()
+        if isinstance(data, list) and data:
+            pair = data[0]
+            base = pair.get("baseToken", {})
+            return {
+                "symbol": base.get("symbol", "???"),
+                "name": base.get("name", ""),
+                "mcap": pair.get("marketCap"),
+                "fdv": pair.get("fdv"),
+                "price_usd": pair.get("priceUsd"),
+            }
+    except Exception:
+        pass
+    return {}
+
+
 # ── OG search for a trending token ───────────────────────────────────
 
 async def _find_og_for_token(token: TrendingToken) -> dict | None:
     """Search for the OG of a trending token. Returns info dict or None."""
     search_term = token.name[:30]
     try:
-        raw_tokens = await search_tokens(search_term)
+        # Fetch trending token market data and OG results in parallel
+        raw_tokens_task = search_tokens(search_term)
+        market_task = _fetch_token_market_data(token.mint)
+
+        raw_tokens, market = await asyncio.gather(raw_tokens_task, market_task)
+
         if not raw_tokens:
             return None
 
@@ -115,12 +142,16 @@ async def _find_og_for_token(token: TrendingToken) -> dict | None:
             "trending_name": token.name,
             "trending_mint": token.mint,
             "trending_boost": token.boost_amount,
+            "trending_symbol": market.get("symbol", "???"),
+            "trending_mcap": market.get("mcap"),
+            "trending_fdv": market.get("fdv"),
             "og_name": og.display_name,
             "og_symbol": og.display_symbol,
             "og_mint": og.mint,
             "og_created_at": og.created_at or "unknown",
             "og_confidence": og.confidence,
             "og_confidence_label": og.confidence_label,
+            "og_mcap": og.market_cap_usd or og.fdv_usd,
             "is_same": og.mint == token.mint,
             "total_found": len(results),
         }
@@ -144,9 +175,27 @@ def _format_boost_bar(amount: int) -> str:
     return "🟢⚫⚫⚫⚫"
 
 
+def _format_mcap(val) -> str:
+    """Format market cap value."""
+    if val is None:
+        return "—"
+    try:
+        val = float(val)
+    except (TypeError, ValueError):
+        return "—"
+    if val >= 1_000_000_000:
+        return f"${val / 1_000_000_000:.2f}B"
+    if val >= 1_000_000:
+        return f"${val / 1_000_000:.2f}M"
+    if val >= 1_000:
+        return f"${val / 1_000:.1f}K"
+    return f"${val:.0f}"
+
+
 def _format_alert(info: dict) -> str:
     """Format a trending OG alert message."""
-    mint = info["og_mint"]
+    t_mint = info["trending_mint"]
+    og_mint = info["og_mint"]
     lines = []
 
     # ── Header
@@ -155,20 +204,23 @@ def _format_alert(info: dict) -> str:
     lines.append("📡 <b>TRENDING ALERT</b>")
     lines.append("")
 
-    # ── Trending token info
-    lines.append(f"<b>{_escape(info['trending_name'])}</b> is heating up on DexScreener")
+    # ── #1 Trending token (shown first)
     boost_bar = _format_boost_bar(info["trending_boost"])
-    lines.append(f"{boost_bar}  <b>{info['trending_boost']:,}</b> boosts")
-    lines.append("")
+    lines.append(f"📈 <b>#1 TRENDING ON DEXSCREENER</b>")
+    lines.append(f"   <b>{_escape(info['trending_name'])}</b> · ${_escape(info['trending_symbol'])}")
 
-    # ── Separator
+    mcap_str = _format_mcap(info.get("trending_mcap") or info.get("trending_fdv"))
+    lines.append(f"   💰 MCap: <b>{mcap_str}</b>")
+    lines.append(f"   {boost_bar} {info['trending_boost']:,} boosts")
+    lines.append(f"   <code>{t_mint}</code>")
+
+    lines.append("")
     lines.append("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬")
     lines.append("")
 
     # ── OG result
     if info["is_same"]:
-        lines.append("✅ <b>THIS IS THE OG</b>")
-        lines.append(f"   <b>{_escape(info['og_name'])}</b> (${_escape(info['og_symbol'])})")
+        lines.append("✅ <b>THE TRENDING TOKEN IS THE OG!</b>")
     else:
         lines.append("🏆 <b>THE OG</b>")
         lines.append(f"   <b>{_escape(info['og_name'])}</b> · ${_escape(info['og_symbol'])}")
@@ -178,6 +230,11 @@ def _format_alert(info: dict) -> str:
         if date_str and date_str != "unknown":
             lines.append(f"   📅 {date_str[:16]}")
 
+        # OG mcap if available
+        og_mcap = _format_mcap(info.get("og_mcap"))
+        if og_mcap != "—":
+            lines.append(f"   💰 MCap: <b>{og_mcap}</b>")
+
         # Confidence
         conf = info["og_confidence"]
         filled = min(conf, 5)
@@ -185,19 +242,21 @@ def _format_alert(info: dict) -> str:
         stars = "★" * filled + "☆" * empty
         lines.append(f"   {stars}  {info['og_confidence_label']}")
 
+        lines.append("")
+
+        # ── OG CA block
+        lines.append("┌─────────────────────────┐")
+        lines.append(f"  <b>OG Contract Address</b>")
+        lines.append(f"  <code>{og_mint}</code>")
+        lines.append("└─────────────────────────┘")
+
     lines.append("")
 
-    # ── CA block (prominent)
-    lines.append("┌─────────────────────────┐")
-    lines.append(f"  <b>OG Contract Address</b>")
-    lines.append(f"  <code>{mint}</code>")
-    lines.append("└─────────────────────────┘")
-    lines.append("")
-
-    # ── Quick links row
-    dex_link = f'<a href="https://dexscreener.com/solana/{mint}">DexScreener</a>'
-    sol_link = f'<a href="https://solscan.io/token/{mint}">Solscan</a>'
-    bird_link = f'<a href="https://birdeye.so/token/{mint}?chain=solana">Birdeye</a>'
+    # ── Quick links for OG
+    target = og_mint
+    dex_link = f'<a href="https://dexscreener.com/solana/{target}">DexScreener</a>'
+    sol_link = f'<a href="https://solscan.io/token/{target}">Solscan</a>'
+    bird_link = f'<a href="https://birdeye.so/token/{target}?chain=solana">Birdeye</a>'
     lines.append(f"🔗 {dex_link} · {sol_link} · {bird_link}")
     lines.append(f"📊 {info['total_found']} tokens found with this name")
 
