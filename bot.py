@@ -264,27 +264,32 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Toggle the DexScreener trending monitor (private chat only)."""
+    """Toggle the DexScreener trending monitor for this chat."""
     _track_interaction(update)
     user = update.effective_user
     chat = update.effective_chat
-    if not user:
-        return
-    if chat and chat.type != "private":
-        await update.message.reply_text("⚠️ Use /monitor in a private chat with me.")
+    if not user or not chat:
         return
 
-    new_state = toggle_monitor(user.id)
+    # In groups, only admins can toggle the monitor
+    if chat.type in ("group", "supergroup"):
+        member = await chat.get_member(user.id)
+        if member.status not in ("administrator", "creator"):
+            await update.message.reply_text("⛔ Only group admins can toggle the monitor.")
+            return
+
+    new_state = toggle_monitor(chat.id)
     if new_state:
+        where = "this group" if chat.type in ("group", "supergroup") else "you"
         text = (
             "✅ <b>Trending monitor ON</b>\n\n"
-            "I'll send you alerts when tokens are trending on DexScreener, "
+            f"I'll send alerts to {where} when tokens are trending on DexScreener, "
             "along with the OG token's CA.\n\n"
             "🔔 Checking every ~3 minutes\n"
             "Use /monitor again to turn off."
         )
     else:
-        text = "🔕 <b>Trending monitor OFF</b>\n\nYou won't receive trending alerts anymore."
+        text = "🔕 <b>Trending monitor OFF</b>\n\nNo more trending alerts in this chat."
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 

@@ -31,7 +31,7 @@ class TrendingToken:
 
 # ── State ─────────────────────────────────────────────────────────────
 
-# {user_id: True} — users who have monitoring enabled
+# {chat_id: True} — chats (private or group) with monitoring enabled
 _monitor_subscribers: dict[int, bool] = {}
 
 # {normalized_name: timestamp} — cooldown to avoid spamming same token
@@ -41,19 +41,19 @@ _monitor_task: asyncio.Task | None = None
 _bot_app = None  # set by start_monitor()
 
 
-def is_monitoring(user_id: int) -> bool:
-    return _monitor_subscribers.get(user_id, False)
+def is_monitoring(chat_id: int) -> bool:
+    return _monitor_subscribers.get(chat_id, False)
 
 
-def toggle_monitor(user_id: int) -> bool:
-    """Toggle monitoring for a user. Returns the new state."""
-    current = _monitor_subscribers.get(user_id, False)
-    _monitor_subscribers[user_id] = not current
+def toggle_monitor(chat_id: int) -> bool:
+    """Toggle monitoring for a chat. Returns the new state."""
+    current = _monitor_subscribers.get(chat_id, False)
+    _monitor_subscribers[chat_id] = not current
     return not current
 
 
-def get_subscriber_ids() -> list[int]:
-    return [uid for uid, active in _monitor_subscribers.items() if active]
+def get_subscriber_chat_ids() -> list[int]:
+    return [cid for cid, active in _monitor_subscribers.items() if active]
 
 
 # ── Fetch trending ────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ async def _monitor_loop() -> None:
 
     while True:
         try:
-            subscribers = get_subscriber_ids()
+            subscribers = get_subscriber_chat_ids()
             if not subscribers:
                 await asyncio.sleep(MONITOR_INTERVAL)
                 continue
@@ -240,17 +240,17 @@ async def _monitor_loop() -> None:
                 _alerted[norm] = now
                 msg = _format_alert(info)
 
-                # Send to all subscribers
-                for uid in subscribers:
+                # Send to all subscribed chats (private + groups)
+                for cid in subscribers:
                     try:
                         await _bot_app.bot.send_message(
-                            chat_id=uid,
+                            chat_id=cid,
                             text=msg,
                             parse_mode="HTML",
                             disable_web_page_preview=True,
                         )
                     except Exception as e:
-                        logger.warning("[monitor] Failed to send alert to %s: %s", uid, e)
+                        logger.warning("[monitor] Failed to send alert to %s: %s", cid, e)
 
                 # Small delay between tokens to avoid rate limits
                 await asyncio.sleep(1)
