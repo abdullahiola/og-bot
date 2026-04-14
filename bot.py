@@ -314,13 +314,36 @@ async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not result:
         return
     chat = result.chat
+    old = result.old_chat_member
     new = result.new_chat_member
     if chat.type not in ("group", "supergroup"):
         return
     # Bot was added to the group
-    if new.status in ("member", "administrator"):
+    if new.status in ("member", "administrator") and old.status in ("left", "kicked"):
         track_group_join(chat.id, chat.title)
         logger.info("Bot added to group: %s (%s)", chat.title, chat.id)
+
+        # Send welcome message
+        stats = get_stats()
+        user_count = format_subscriber_count(stats["total_users"])
+        welcome = (
+            "👋 <b>Hey! OGfinder has entered the chat.</b>\n\n"
+            "I find the <b>original</b> Solana token so you never buy a copycat.\n\n"
+            "🔹 /og &lt;name&gt; — find the OG token\n"
+            "🔹 /findog &lt;mint&gt; — scan a contract address\n"
+            "🔹 /link &lt;url&gt; — search by social link\n"
+            "🔹 /monitor — toggle trending alerts\n\n"
+            f"👥 Trusted by <b>{user_count}</b> users · Let's find some OGs 🚀"
+        )
+        try:
+            await context.bot.send_message(
+                chat_id=chat.id,
+                text=welcome,
+                parse_mode=ParseMode.HTML,
+            )
+        except Exception as e:
+            logger.warning("Failed to send welcome message to %s: %s", chat.id, e)
+
     # Bot was removed from the group
     elif new.status in ("left", "kicked"):
         track_group_left(chat.id)
