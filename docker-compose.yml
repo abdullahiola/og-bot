@@ -1,0 +1,11 @@
+services:
+  bot:
+    build: .
+    container_name: ogfinder-bot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ogfinder-data:/app/.data
+
+volumes:
+  ogfinder-data:
