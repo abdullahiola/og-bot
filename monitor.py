@@ -199,66 +199,52 @@ def _format_alert(info: dict) -> str:
     lines = []
 
     # ── Header
-    lines.append("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥")
-    lines.append("")
-    lines.append("📡 <b>TRENDING ALERT</b>")
+    lines.append("<b>TRENDING ALERT</b>")
     lines.append("")
 
-    # ── #1 Trending token (shown first)
-    boost_bar = _format_boost_bar(info["trending_boost"])
-    lines.append(f"📈 <b>#1 TRENDING ON DEXSCREENER</b>")
-    lines.append(f"   <b>{_escape(info['trending_name'])}</b> · ${_escape(info['trending_symbol'])}")
-
+    # ── Trending token
+    lines.append(f"<b>{_escape(info['trending_name'])}</b> · ${_escape(info['trending_symbol'])}")
     mcap_str = _format_mcap(info.get("trending_mcap") or info.get("trending_fdv"))
-    lines.append(f"   💰 MCap: <b>{mcap_str}</b>")
-    lines.append(f"   {boost_bar} {info['trending_boost']:,} boosts")
-    lines.append(f"   <code>{t_mint}</code>")
+    lines.append(f"MCap: <b>{mcap_str}</b> · {info['trending_boost']:,} boosts")
+    lines.append(f"<code>{t_mint}</code>")
 
     lines.append("")
-    lines.append("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬")
+    lines.append("———")
     lines.append("")
 
     # ── OG result
     if info["is_same"]:
-        lines.append("✅ <b>THE TRENDING TOKEN IS THE OG!</b>")
+        lines.append("<b>This is the OG.</b>")
     else:
-        lines.append("🏆 <b>THE OG</b>")
-        lines.append(f"   <b>{_escape(info['og_name'])}</b> · ${_escape(info['og_symbol'])}")
+        lines.append(f"<b>OG: {_escape(info['og_name'])}</b> · ${_escape(info['og_symbol'])}")
 
-        # Date
         date_str = info["og_created_at"]
         if date_str and date_str != "unknown":
-            lines.append(f"   📅 {date_str[:16]}")
+            lines.append(f"Created: {date_str[:16]}")
 
-        # OG mcap if available
         og_mcap = _format_mcap(info.get("og_mcap"))
         if og_mcap != "—":
-            lines.append(f"   💰 MCap: <b>{og_mcap}</b>")
+            lines.append(f"MCap: <b>{og_mcap}</b>")
 
-        # Confidence
         conf = info["og_confidence"]
         filled = min(conf, 5)
         empty = 5 - filled
         stars = "★" * filled + "☆" * empty
-        lines.append(f"   {stars}  {info['og_confidence_label']}")
+        lines.append(f"{stars} {info['og_confidence_label']}")
 
         lines.append("")
-
-        # ── OG CA block
-        lines.append("┌─────────────────────────┐")
-        lines.append(f"  <b>OG Contract Address</b>")
-        lines.append(f"  <code>{og_mint}</code>")
-        lines.append("└─────────────────────────┘")
+        lines.append(f"<b>OG CA:</b>")
+        lines.append(f"<code>{og_mint}</code>")
 
     lines.append("")
 
-    # ── Quick links for OG
+    # ── Links
     target = og_mint
     dex_link = f'<a href="https://dexscreener.com/solana/{target}">DexScreener</a>'
     sol_link = f'<a href="https://solscan.io/token/{target}">Solscan</a>'
     bird_link = f'<a href="https://birdeye.so/token/{target}?chain=solana">Birdeye</a>'
-    lines.append(f"🔗 {dex_link} · {sol_link} · {bird_link}")
-    lines.append(f"📊 {info['total_found']} tokens found with this name")
+    lines.append(f"{dex_link} · {sol_link} · {bird_link}")
+    lines.append(f"{info['total_found']} tokens with this name")
 
     return "\n".join(lines)
 

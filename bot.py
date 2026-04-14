@@ -198,20 +198,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_count = format_subscriber_count(stats["total_users"])
     group_count = format_subscriber_count(stats["active_groups"])
     text = (
-        "👋 <b>Welcome to OGfinder Bot!</b>\n\n"
-        "Find the original Solana token by name — or check if yours is the OG.\n\n"
-        "<b>How to use:</b>\n"
-        "• Send a <b>token name</b> → find the OG (e.g. <code>pepe</code>)\n"
-        "• Send a <b>mint address</b> → scan if it's the OG\n"
-        "• Send a <b>social URL</b> → find tokens linked to it\n\n"
-        "<b>Commands:</b>\n"
+        "<b>OGfinder Bot</b>\n\n"
+        "Find the original Solana token by name, contract address, or social link.\n\n"
+        "<b>Commands</b>\n"
         "/og &lt;name&gt; — search by name\n"
         "/findog &lt;ca&gt; — scan a contract address\n"
         "/link &lt;url&gt; — search by social link\n"
-        "/monitor — toggle trending alerts\n"
-        "/stats — bot statistics (admin)\n\n"
-        "Or just send any text and I'll auto-detect the mode! 🚀\n\n"
-        f"👥 <b>{user_count}</b> users · 💬 <b>{group_count}</b> groups"
+        "/monitor — toggle trending alerts\n\n"
+        "Or just send any text in DM and I'll auto-detect.\n\n"
+        f"Trusted by <b>{user_count}</b> users · <b>{group_count}</b> groups"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -253,12 +248,12 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     s = get_stats()
     text = (
-        "📊 <b>OGfinder Bot Stats</b>\n\n"
-        f"👥 Total users: <b>{s['total_users']:,}</b>\n"
-        f"🟢 Active (24h): <b>{s['active_24h']:,}</b>\n"
-        f"💬 Groups: <b>{s['active_groups']:,}</b>\n\n"
-        f"🔍 Total searches: <b>{s['total_searches']:,}</b>\n"
-        f"📈 Searches (24h): <b>{s['searches_24h']:,}</b>"
+        "<b>OGfinder Stats</b>\n\n"
+        f"Users: <b>{s['total_users']:,}</b>\n"
+        f"Active (24h): <b>{s['active_24h']:,}</b>\n"
+        f"Groups: <b>{s['active_groups']:,}</b>\n\n"
+        f"Total searches: <b>{s['total_searches']:,}</b>\n"
+        f"Searches (24h): <b>{s['searches_24h']:,}</b>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -282,14 +277,14 @@ async def cmd_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if new_state:
         where = "this group" if chat.type in ("group", "supergroup") else "you"
         text = (
-            "✅ <b>Trending monitor ON</b>\n\n"
-            f"I'll send alerts to {where} when tokens are trending on DexScreener, "
+            "<b>Trending monitor ON</b>\n\n"
+            f"Alerts will be sent to {where} when tokens trend on DexScreener, "
             "along with the OG token's CA.\n\n"
-            "🔔 Checking every ~3 minutes\n"
+            "Checking every ~3 minutes.\n"
             "Use /monitor again to turn off."
         )
     else:
-        text = "🔕 <b>Trending monitor OFF</b>\n\nNo more trending alerts in this chat."
+        text = "<b>Trending monitor OFF</b>\n\nNo more trending alerts in this chat."
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -324,14 +319,16 @@ async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.info("Bot added to group: %s (%s)", chat.title, chat.id)
 
         # Send welcome message
+        s = get_stats()
+        uc = format_subscriber_count(s["total_users"])
         welcome = (
-            "👋 <b>Hey! OGfinder has entered the chat.</b>\n\n"
-            "I find the <b>original</b> Solana token so you never buy a copycat.\n\n"
-            "🔹 /og &lt;name&gt; — find the OG token\n"
-            "🔹 /findog &lt;ca&gt; — scan a contract address\n"
-            "🔹 /link &lt;url&gt; — search by social link\n"
-            "🔹 /monitor — toggle trending alerts\n\n"
-            "Let's find some OGs 🚀"
+            "<b>OGfinder has entered the chat.</b>\n\n"
+            "I find the original Solana token so you don't buy a copycat.\n\n"
+            "/og &lt;name&gt; — find the OG token\n"
+            "/findog &lt;ca&gt; — scan a contract address\n"
+            "/link &lt;url&gt; — search by social link\n"
+            "/monitor — toggle trending alerts\n\n"
+            f"Trusted by <b>{uc}</b> users"
         )
         try:
             await context.bot.send_message(
