@@ -205,7 +205,8 @@ def _format_alert(info: dict) -> str:
     # ── Trending token
     lines.append(f"<b>{_escape(info['trending_name'])}</b> · ${_escape(info['trending_symbol'])}")
     mcap_str = _format_mcap(info.get("trending_mcap") or info.get("trending_fdv"))
-    lines.append(f"MCap: <b>{mcap_str}</b> · {info['trending_boost']:,} boosts")
+    boost_bar = _format_boost_bar(info["trending_boost"])
+    lines.append(f"MCap: <b>{mcap_str}</b> · {boost_bar} {info['trending_boost']:,} boosts")
     lines.append(f"<code>{t_mint}</code>")
 
     lines.append("")
