@@ -195,13 +195,13 @@ def _track_interaction(update: Update) -> None:
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     _track_interaction(update)
     text = (
-        "Hey! Welcome to <b>OGfinder Bot</b> \n\n"
+        "👋 Hey! Welcome to <b>OGfinder Bot</b>\n\n"
         "I find the original Solana token so you never buy a copycat.\n\n"
         "<b>Commands</b>\n"
-        "/og &lt;name&gt; — search by name\n"
-        "/findog &lt;ca&gt; — scan a contract address\n"
-        "/link &lt;url&gt; — search by social link\n"
-        "/monitor — toggle trending alerts\n\n"
+        "🔍 /og &lt;name&gt; — search by name\n"
+        "📋 /findog &lt;ca&gt; — scan a contract address\n"
+        "🔗 /link &lt;url&gt; — search by social link\n"
+        "📡 /monitor — toggle trending alerts\n\n"
         "Or just send any text in DM and I'll auto-detect."
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
@@ -351,12 +351,12 @@ async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         # Send welcome message
         welcome = (
-            "Hey! <b>OGfinder</b> has entered the chat.\n\n"
+            "👋 Hey! <b>OGfinder</b> has entered the chat.\n\n"
             "I find the original Solana token so you never buy a copycat.\n\n"
-            "/og &lt;name&gt; — find the OG token\n"
-            "/findog &lt;ca&gt; — scan a contract address\n"
-            "/link &lt;url&gt; — search by social link\n"
-            "/monitor — toggle trending alerts"
+            "🔍 /og &lt;name&gt; — find the OG token\n"
+            "📋 /findog &lt;ca&gt; — scan a contract address\n"
+            "🔗 /link &lt;url&gt; — search by social link\n"
+            "📡 /monitor — toggle trending alerts"
         )
         try:
             await context.bot.send_message(
