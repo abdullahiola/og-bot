@@ -194,19 +194,15 @@ def _track_interaction(update: Update) -> None:
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     _track_interaction(update)
-    stats = get_stats()
-    user_count = format_subscriber_count(stats["total_users"])
-    group_count = format_subscriber_count(stats["active_groups"])
     text = (
-        "<b>OGfinder Bot</b>\n\n"
-        "Find the original Solana token by name, contract address, or social link.\n\n"
+        "Hey! Welcome to <b>OGfinder Bot</b> \n\n"
+        "I find the original Solana token so you never buy a copycat.\n\n"
         "<b>Commands</b>\n"
         "/og &lt;name&gt; — search by name\n"
         "/findog &lt;ca&gt; — scan a contract address\n"
         "/link &lt;url&gt; — search by social link\n"
         "/monitor — toggle trending alerts\n\n"
-        "Or just send any text in DM and I'll auto-detect.\n\n"
-        f"Trusted by <b>{user_count}</b> users · <b>{group_count}</b> groups"
+        "Or just send any text in DM and I'll auto-detect."
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -354,16 +350,13 @@ async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.info("Bot added to group: %s (%s)", chat.title, chat.id)
 
         # Send welcome message
-        s = get_stats()
-        uc = format_subscriber_count(s["total_users"])
         welcome = (
-            "<b>OGfinder has entered the chat.</b>\n\n"
-            "I find the original Solana token so you don't buy a copycat.\n\n"
+            "Hey! <b>OGfinder</b> has entered the chat.\n\n"
+            "I find the original Solana token so you never buy a copycat.\n\n"
             "/og &lt;name&gt; — find the OG token\n"
             "/findog &lt;ca&gt; — scan a contract address\n"
             "/link &lt;url&gt; — search by social link\n"
-            "/monitor — toggle trending alerts\n\n"
-            f"Trusted by <b>{uc}</b> users"
+            "/monitor — toggle trending alerts"
         )
         try:
             await context.bot.send_message(
