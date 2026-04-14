@@ -206,7 +206,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• Send a <b>social URL</b> → find tokens linked to it\n\n"
         "<b>Commands:</b>\n"
         "/og &lt;name&gt; — search by name\n"
-        "/findog &lt;mint&gt; — scan a mint address\n"
+        "/findog &lt;ca&gt; — scan a contract address\n"
         "/link &lt;url&gt; — search by social link\n"
         "/monitor — toggle trending alerts\n"
         "/stats — bot statistics (admin)\n\n"
@@ -229,7 +229,7 @@ async def cmd_findog(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     _track_interaction(update)
     query = " ".join(context.args) if context.args else ""
     if not query:
-        await update.message.reply_text("Usage: /findog <mint address>\nPaste a Solana mint address to check if it's the OG.")
+        await update.message.reply_text("Usage: /findog <ca>\nPaste a Solana contract address to check if it's the OG.")
         return
     await _handle_query(update, query)
 
@@ -324,16 +324,14 @@ async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.info("Bot added to group: %s (%s)", chat.title, chat.id)
 
         # Send welcome message
-        stats = get_stats()
-        user_count = format_subscriber_count(stats["total_users"])
         welcome = (
             "👋 <b>Hey! OGfinder has entered the chat.</b>\n\n"
             "I find the <b>original</b> Solana token so you never buy a copycat.\n\n"
             "🔹 /og &lt;name&gt; — find the OG token\n"
-            "🔹 /findog &lt;mint&gt; — scan a contract address\n"
+            "🔹 /findog &lt;ca&gt; — scan a contract address\n"
             "🔹 /link &lt;url&gt; — search by social link\n"
             "🔹 /monitor — toggle trending alerts\n\n"
-            f"👥 Trusted by <b>{user_count}</b> users · Let's find some OGs 🚀"
+            "Let's find some OGs 🚀"
         )
         try:
             await context.bot.send_message(
